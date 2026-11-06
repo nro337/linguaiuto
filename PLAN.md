@@ -69,6 +69,13 @@ YouTube's subtitle (`timedtext`) requests now need a proof-of-origin token (`pot
 3. If the player hasn't requested subtitles yet, the extension briefly turns captions on through the player API, captures the URL, then restores the user's caption state. The user only ever sees the extension's own overlay.
 4. Spike this first in Phase 1. Everything depends on it.
 
+Findings from the Phase 1 spike:
+
+- The player requests subtitles via XHR, already with `fmt=json3`. Without `pot` the response is empty.
+- The player can report a caption track as selected without having downloaded it, so "is it on?" checks are unreliable. Calling the player's `toggleSubtitles()` does trigger the request. The extension toggles and then restores the user's on/off choice.
+- Pre-roll ads play in the same player and make subtitle requests for the ad's video. The extension ignores requests for other video IDs, doesn't toggle during ads (`.ad-showing`), and doesn't count ad time towards its timeout.
+- Not every request carries `pot`. Requests without one are still reused as-is.
+
 ### Flow on video load
 
 1. Detect in-site navigation (`yt-navigate-finish`) and read the video ID.
@@ -88,14 +95,14 @@ YouTube's subtitle (`timedtext`) requests now need a proof-of-origin token (`pot
 
 ## Phases
 
-### Phase 0 — Setup
+### Phase 0 — Setup ✅
 
 - WXT + React + TypeScript project
 - ESLint, Prettier, Vitest, GitHub Actions CI
 - Empty overlay drawn inside the YouTube player (Shadow DOM) to show the wiring works
 - Placeholder popup
 
-### Phase 1 — Subtitles on screen
+### Phase 1 — Subtitles on screen (built; needs checking in a normal Chrome profile)
 
 - Spike: catch the player's timedtext request (pot), fetch json3
 - Cue parser + binary-search scheduler (unit tested)

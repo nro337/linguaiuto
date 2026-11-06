@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import {
   DEFAULT_SETTINGS,
+  LANGUAGES,
   settingsItem,
+  type LanguageCode,
   type LineSettings,
   type Settings,
 } from '@/storage/settings';
@@ -18,6 +20,13 @@ export function App() {
   const update = (next: Settings) => {
     setSettings(next);
     void settingsItem.setValue(next);
+  };
+
+  const setLanguage = (key: 'learningLanguage' | 'nativeLanguage', code: LanguageCode) => {
+    const other = key === 'learningLanguage' ? 'nativeLanguage' : 'learningLanguage';
+    // Picking the other line's language swaps the two.
+    const swap = settings[other] === code ? { [other]: settings[key] } : {};
+    update({ ...settings, ...swap, [key]: code });
   };
 
   const updateLine = (key: LineKey, patch: Partial<LineSettings>) =>
@@ -37,6 +46,16 @@ export function App() {
       {(['learning', 'native'] as const).map((key) => (
         <fieldset key={key}>
           <legend>{key === 'learning' ? 'Learning language' : 'Native language'}</legend>
+          <select
+            value={settings[`${key}Language`]}
+            onChange={(e) => setLanguage(`${key}Language`, e.target.value as LanguageCode)}
+          >
+            {LANGUAGES.map((lang) => (
+              <option key={lang.code} value={lang.code}>
+                {lang.name}
+              </option>
+            ))}
+          </select>
           <label className="row">
             <input
               type="checkbox"

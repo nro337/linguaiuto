@@ -1,6 +1,7 @@
 import ReactDOM from 'react-dom/client';
 import { Overlay } from '@/overlay/Overlay';
 import { PLAYER_SELECTOR } from '@/adapters/youtube/player';
+import { startSubtitles } from '@/adapters/youtube/subtitles';
 import '@/overlay/styles.css';
 
 export default defineContentScript({
@@ -8,6 +9,10 @@ export default defineContentScript({
   cssInjectionMode: 'ui',
 
   async main(ctx) {
+    const controller = new AbortController();
+    ctx.onInvalidated(() => controller.abort());
+    startSubtitles(controller.signal);
+
     const ui = await createShadowRootUi(ctx, {
       name: 'linguaiuto-overlay',
       position: 'inline',

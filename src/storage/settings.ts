@@ -1,5 +1,10 @@
 export type LanguageCode = 'en' | 'it';
 
+export const LANGUAGES: { code: LanguageCode; name: string }[] = [
+  { code: 'it', name: 'Italian' },
+  { code: 'en', name: 'English' },
+];
+
 export interface LineSettings {
   visible: boolean;
   blurred: boolean;

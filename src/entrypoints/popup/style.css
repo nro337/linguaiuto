@@ -31,3 +31,8 @@ fieldset {
   gap: 6px;
   padding: 2px 0;
 }
+
+select {
+  margin: 2px 0 4px;
+  font: inherit;
+}

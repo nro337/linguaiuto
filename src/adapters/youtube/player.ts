@@ -11,3 +11,7 @@ export function getVideoId(url: string = location.href): string | null {
   const shorts = u.pathname.match(/^\/shorts\/([\w-]{11})/);
   return shorts?.[1] ?? null;
 }
+
+export function findVideo(): HTMLVideoElement | null {
+  return document.querySelector<HTMLVideoElement>(`${PLAYER_SELECTOR} video.html5-main-video`);
+}

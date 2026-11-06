@@ -58,3 +58,9 @@ html {
 .lg-blurred .lg-word:hover {
   filter: none;
 }
+
+/* Placeholder while a line's translation loads. Never blurred. */
+.lg-status {
+  color: #bdbdbd;
+  font-style: italic;
+}
