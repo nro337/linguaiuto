@@ -2,7 +2,8 @@
 export type BackgroundRequest =
   | { type: 'translations:get'; pair: string; texts: string[] }
   | { type: 'translations:put'; pair: string; entries: [string, string][] }
-  | { type: 'dictionary:lookup'; lang: string; keys: string[] };
+  | { type: 'dictionary:lookup'; lang: string; keys: string[] }
+  | { type: 'open-vocabulary' };
 
 export async function sendToBackground<T>(request: BackgroundRequest): Promise<T | null> {
   try {

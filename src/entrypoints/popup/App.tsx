@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useVocab } from '@/overlay/useVocab';
 import {
   DEFAULT_SETTINGS,
+  FONT_SIZE_RANGE,
   LANGUAGES,
   settingsItem,
   type LanguageCode,
@@ -12,6 +14,7 @@ type LineKey = 'learning' | 'native';
 
 export function App() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const wordCount = Object.keys(useVocab()).length;
 
   useEffect(() => {
     void settingsItem.getValue().then(setSettings);
@@ -20,6 +23,23 @@ export function App() {
   const update = (next: Settings) => {
     setSettings(next);
     void settingsItem.setValue(next);
+  };
+
+  // Sliders update the view right away and save after a pause, because
+  // chrome.storage.sync limits how often it can be written.
+  const saveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  /** Settings waiting to be saved, if any. */
+  const pending = useRef<Settings | null>(null);
+  const saveNow = () => {
+    clearTimeout(saveTimer.current);
+    if (pending.current) void settingsItem.setValue(pending.current);
+    pending.current = null;
+  };
+  const updateSoon = (next: Settings) => {
+    setSettings(next);
+    pending.current = next;
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(saveNow, 400);
   };
 
   const setLanguage = (key: 'learningLanguage' | 'nativeLanguage', code: LanguageCode) => {
@@ -72,16 +92,78 @@ export function App() {
             />
             Blur
           </label>
+          <label className="slider">
+            <span>Size</span>
+            <input
+              type="range"
+              min={FONT_SIZE_RANGE[key].min}
+              max={FONT_SIZE_RANGE[key].max}
+              value={settings[key].fontSizePx}
+              onChange={(e) =>
+                updateSoon({
+                  ...settings,
+                  [key]: { ...settings[key], fontSizePx: Number(e.target.value) },
+                })
+              }
+              onPointerUp={saveNow}
+            />
+            <output>{settings[key].fontSizePx}px</output>
+          </label>
         </fieldset>
       ))}
-      <label className="row option">
+      <label className="slider standalone">
+        <span>Background</span>
         <input
-          type="checkbox"
-          checked={settings.pauseOnHover}
-          onChange={(e) => update({ ...settings, pauseOnHover: e.target.checked })}
+          type="range"
+          min={0}
+          max={100}
+          step={5}
+          value={Math.round(settings.backgroundOpacity * 100)}
+          onChange={(e) =>
+            updateSoon({ ...settings, backgroundOpacity: Number(e.target.value) / 100 })
+          }
+          onPointerUp={saveNow}
         />
-        Pause while hovering a word
+        <output>{Math.round(settings.backgroundOpacity * 100)}%</output>
       </label>
+      <div className="row position">
+        <span>Position: {settings.position ? 'custom' : 'default'}</span>
+        <button
+          type="button"
+          disabled={!settings.position}
+          onClick={() => update({ ...settings, position: null })}
+        >
+          Reset
+        </button>
+      </div>
+      <div className="options">
+        {(
+          [
+            ['pauseOnHover', 'Pause while hovering a word'],
+            ['autoPause', 'Pause at the end of each line'],
+            ['showTranscript', 'Show transcript next to the video'],
+          ] as const
+        ).map(([key, label]) => (
+          <label className="row" key={key}>
+            <input
+              type="checkbox"
+              checked={settings[key]}
+              onChange={(e) => update({ ...settings, [key]: e.target.checked })}
+            />
+            {label}
+          </label>
+        ))}
+      </div>
+      <button
+        type="button"
+        className="vocab-button"
+        onClick={() => {
+          void browser.tabs.create({ url: browser.runtime.getURL('/vocab.html') });
+          window.close();
+        }}
+      >
+        Vocabulary ({wordCount})
+      </button>
       <p className="hint">Shortcuts: Alt+1 / Alt+2 show or hide · Alt+Shift+1 / Alt+Shift+2 blur</p>
     </main>
   );

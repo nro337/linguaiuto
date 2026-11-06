@@ -5,6 +5,7 @@ import type { DictEntry } from '@/dictionary/types';
 import { translateWord } from '@/providers/translator/word';
 import { speak } from '@/providers/pronunciation/speech';
 import type { Settings } from '@/storage/settings';
+import { removeWord, saveWord } from '@/storage/vocab';
 import type { HoveredWord } from './useWordHover';
 
 const POS_NAMES: Record<string, string> = {
@@ -75,9 +76,32 @@ const SpeakerIcon = () => (
   </svg>
 );
 
+/** Where the word was seen, saved with it. */
+export interface WordContext {
+  learningLine?: string;
+  nativeLine?: string;
+  videoId: string | null;
+  timeMs: number;
+}
+
+const BookmarkIcon = ({ filled }: { filled: boolean }) => (
+  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+    <path
+      fill={filled ? 'currentColor' : 'none'}
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinejoin="round"
+      d="M6 3h12v18l-6-4.5L6 21z"
+    />
+  </svg>
+);
+
 interface WordTooltipProps {
   hovered: HoveredWord;
   settings: Settings;
+  context: WordContext;
+  /** Whether a word is already in the vocabulary (by learning-language word). */
+  isSaved: (word: string) => boolean;
   onEnter: () => void;
   onLeave: () => void;
 }
@@ -87,7 +111,14 @@ interface WordTooltipProps {
  * and dictionary entry; a native-language word shows its learning-language
  * translation and that word's entry, so you always see the word you're learning.
  */
-export function WordTooltip({ hovered, settings, onEnter, onLeave }: WordTooltipProps) {
+export function WordTooltip({
+  hovered,
+  settings,
+  context,
+  isSaved,
+  onEnter,
+  onLeave,
+}: WordTooltipProps) {
   const { learningLanguage: learning, nativeLanguage: native } = settings;
   const fromLearning = hovered.kind === 'learning';
   const [translation, setTranslation] = useState<string | null | undefined>(undefined);
@@ -118,6 +149,35 @@ export function WordTooltip({ hovered, settings, onEnter, onLeave }: WordTooltip
   const ipa = result?.entries.find((e) => e.i)?.i;
   const rows = result ? rowsFor(result) : [];
   const loadingDetails = result === undefined && (fromLearning || translation !== null);
+  const saved = !!focus && isSaved(focus);
+
+  const toggleSaved = () => {
+    if (!focus) return;
+    if (saved) {
+      void removeWord(learning, focus);
+      return;
+    }
+    const first = rows[0];
+    const lemmaRow = rows.find((r) => r.lemma);
+    void saveWord({
+      word: focus,
+      lang: learning,
+      translation: (fromLearning ? translation : hovered.word) ?? undefined,
+      ipa,
+      pos: first?.pos,
+      lemma: lemmaRow?.lemma?.word,
+      definition: first
+        ? [first.text, first.lemma?.gloss && `${first.lemma.word}: ${first.lemma.gloss}`]
+            .filter(Boolean)
+            .join(' — ')
+        : undefined,
+      context: context.learningLine ?? '',
+      contextTranslation: context.nativeLine,
+      videoId: context.videoId ?? '',
+      timeMs: context.timeMs,
+      savedAt: Date.now(),
+    });
+  };
 
   // Above the word, centered on it, kept inside the player.
   const { width: layerWidth, height: layerHeight } = hovered.layer;
@@ -152,6 +212,18 @@ export function WordTooltip({ hovered, settings, onEnter, onLeave }: WordTooltip
             onClick={() => speak(focus, learning)}
           >
             <SpeakerIcon />
+          </button>
+        )}
+        {focus && (
+          <button
+            type="button"
+            className={`lg-tip-save${saved ? ' lg-tip-saved' : ''}`}
+            aria-pressed={saved}
+            aria-label={saved ? `Remove ${focus} from vocabulary` : `Save ${focus} to vocabulary`}
+            title={saved ? 'Saved — click to remove' : 'Save to vocabulary'}
+            onClick={toggleSaved}
+          >
+            <BookmarkIcon filled={saved} />
           </button>
         )}
       </div>

@@ -10,6 +10,8 @@ interface LineProps {
   line: LineSettings;
   /** Token index of the word with an open tooltip, or -1. */
   activeIndex: number;
+  /** Words to mark as saved in the vocabulary. */
+  isSaved?: (word: string) => boolean;
   onWordEnter: (
     kind: LineKind,
     index: number,
@@ -27,6 +29,7 @@ export const Line = memo(function Line({
   lang,
   line,
   activeIndex,
+  isSaved,
   onWordEnter,
   onLeave,
 }: LineProps) {
@@ -53,7 +56,7 @@ export const Line = memo(function Line({
           <span
             key={i}
             data-i={i}
-            className={i === activeIndex ? 'lg-word lg-word-active' : 'lg-word'}
+            className={`lg-word${i === activeIndex ? ' lg-word-active' : ''}${isSaved?.(token.text) ? ' lg-word-saved' : ''}`}
           >
             {token.text}
           </span>

@@ -1,6 +1,15 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { createStore } from '@/core/store';
-import { LANGUAGES, settingsItem, type LineSettings, type Settings } from '@/storage/settings';
+import {
+  FONT_SIZE_RANGE,
+  LANGUAGES,
+  settingsItem,
+  type LineSettings,
+  type Settings,
+} from '@/storage/settings';
+import { flushPreview, previewSettings } from './settingsPreview';
+import { goToLine } from '@/adapters/youtube/playback';
+import { sendToBackground } from '@/messaging';
 
 type LineKind = 'learning' | 'native';
 
@@ -91,16 +100,89 @@ export function Menu({ settings }: { settings: Settings }) {
       </label>
       {row('learning', '1')}
       {row('native', '2')}
-      <label className="lg-menu-row lg-menu-option">
-        <input
-          type="checkbox"
-          checked={settings.pauseOnHover}
-          disabled={!settings.enabled}
-          onChange={(e) => update({ pauseOnHover: e.target.checked })}
-        />
-        Pause while hovering a word
-      </label>
-      <p className="lg-menu-hint">Alt+1/2 show · Alt+Shift+1/2 blur</p>
+      <div className="lg-menu-options">
+        {(
+          [
+            ['pauseOnHover', 'Pause while hovering a word'],
+            ['autoPause', 'Pause at the end of each line'],
+            ['showTranscript', 'Show transcript next to the video'],
+          ] as const
+        ).map(([key, label]) => (
+          <label className="lg-menu-row" key={key}>
+            <input
+              type="checkbox"
+              checked={settings[key]}
+              disabled={!settings.enabled}
+              onChange={(e) => update({ [key]: e.target.checked })}
+            />
+            {label}
+          </label>
+        ))}
+      </div>
+      <fieldset className="lg-menu-appearance" disabled={!settings.enabled}>
+        <legend>Appearance</legend>
+        {(['learning', 'native'] as const).map((kind) => (
+          <label className="lg-menu-slider" key={kind}>
+            <span>{kind === 'learning' ? 'Top line size' : 'Bottom line size'}</span>
+            <input
+              type="range"
+              min={FONT_SIZE_RANGE[kind].min}
+              max={FONT_SIZE_RANGE[kind].max}
+              step={1}
+              value={settings[kind].fontSizePx}
+              onChange={(e) =>
+                previewSettings({
+                  [kind]: { ...settings[kind], fontSizePx: Number(e.target.value) },
+                })
+              }
+              onPointerUp={() => void flushPreview()}
+            />
+            <output>{settings[kind].fontSizePx}px</output>
+          </label>
+        ))}
+        <label className="lg-menu-slider">
+          <span>Background</span>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={5}
+            value={Math.round(settings.backgroundOpacity * 100)}
+            onChange={(e) => previewSettings({ backgroundOpacity: Number(e.target.value) / 100 })}
+            onPointerUp={() => void flushPreview()}
+          />
+          <output>{Math.round(settings.backgroundOpacity * 100)}%</output>
+        </label>
+        <div className="lg-menu-position">
+          <span>Drag ⠿ beside the subtitles to move them</span>
+          <button
+            type="button"
+            disabled={!settings.position}
+            onClick={() => update({ position: null })}
+          >
+            Reset position
+          </button>
+        </div>
+      </fieldset>
+      <div className="lg-menu-nav" role="group" aria-label="Line controls">
+        <button type="button" title="Previous line (Shift+←)" onClick={() => goToLine('previous')}>
+          ⏮ Previous
+        </button>
+        <button type="button" title="Replay line (Shift+↓)" onClick={() => goToLine('replay')}>
+          ↻ Replay
+        </button>
+        <button type="button" title="Next line (Shift+→)" onClick={() => goToLine('next')}>
+          Next ⏭
+        </button>
+      </div>
+      <button
+        type="button"
+        className="lg-menu-link"
+        onClick={() => void sendToBackground({ type: 'open-vocabulary' })}
+      >
+        Open vocabulary →
+      </button>
+      <p className="lg-menu-hint">Alt+1/2 show · Alt+Shift+1/2 blur · Shift+←/↓/→ lines</p>
     </div>
   );
 }

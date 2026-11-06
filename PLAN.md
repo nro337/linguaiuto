@@ -118,7 +118,7 @@ Findings from the Phase 1 spike:
 - Keyboard shortcuts: `Alt+1` / `Alt+2` show/hide, `Alt+Shift+1` / `Alt+Shift+2` blur
 - "Aa" button in YouTube's control bar opens a settings panel; popup has the same toggles
 
-### Phase 3 — Word tooltip (built; needs checking in a normal Chrome profile)
+### Phase 3 — Word tooltip ✅
 
 - Words split with `Intl.Segmenter`; Italian elisions split into two words (`l'` + `acqua`)
 - Hover intent (120 ms open, 250 ms grace to move into the tooltip); the hovered word stays unblurred
@@ -127,17 +127,24 @@ Findings from the Phase 1 spike:
 - Offline dictionaries built from Wiktionary (kaikki.org) for the 50k most frequent subtitle words + their base forms: IT 0.8 MB, EN 2.3 MB gzipped, imported into IndexedDB on install
 - Optional pause while hovering (menu + popup)
 
-### Phase 4 — Learning tools (later)
+### Phase 4 — Learning tools (built; needs checking in a normal Chrome profile)
 
-- Save words to a vocab list, Anki CSV export
-- Previous/next/repeat line, auto-pause at the end of each line
-- Transcript side panel with click-to-jump
-- Site adapters for other video platforms
+- Save words from the tooltip (bookmark); saved words underlined in the subtitles
+- Vocabulary page (search, remove, link back to the moment in the video); export for Anki (tab-separated with Anki headers, HTML fields, tags) and CSV
+- Previous / next / replay line: `Shift+←` / `Shift+→` / `Shift+↓`, plus buttons in the Aa menu
+- Optional auto-pause at the end of each line
+- Transcript panel in YouTube's right-hand column: follows playback, click to jump, respects blur, light/dark theme
+- One shared playback loop drives the overlay, the transcript and auto-pause
+- Appearance for different visibility needs: text size per line, background opacity (text gets an outline below 50%), and subtitles that can be dragged anywhere inside the video (arrow keys on the handle, double-click or "Reset position" to restore). Sliders preview instantly and save after a pause, since `chrome.storage.sync` limits write frequency
+
+### Later
+
+- Site adapters for other video platforms (YouTube-specific code is already isolated in `adapters/youtube`)
 - AI features (Gemini Nano) for explanations in context
 
 ## Settings
 
-Learning language, native language, show/hide each line, blur each line, font size for each line, overlay position, tooltip delay, pause on hover.
+Learning language, native language, show/hide each line, blur each line, text size for each line, background opacity, subtitle position, pause on hover, pause at end of each line, transcript on/off.
 
 ## Risks
 

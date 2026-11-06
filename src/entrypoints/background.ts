@@ -25,6 +25,10 @@ export default defineBackground(() => {
       lookupWord(message.lang, message.keys).then(sendResponse, () => sendResponse(null));
       return true;
     }
+    if (message.type === 'open-vocabulary') {
+      void browser.tabs.create({ url: browser.runtime.getURL('/vocab.html') });
+      return false;
+    }
     return false;
   });
 });
