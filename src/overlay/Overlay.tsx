@@ -9,6 +9,7 @@ import { subtitleStore } from '@/adapters/youtube/subtitles';
 import { findVideo } from '@/adapters/youtube/player';
 import { useActiveCues } from './useActiveCues';
 import { pendingMessage } from './messages';
+import { Menu } from './Menu';
 
 const Line = memo(function Line({
   text,
@@ -52,7 +53,7 @@ export function Overlay() {
 
   const active = useActiveCues(video, subs.learning, subs.native);
 
-  if (!settings.enabled || subs.status !== 'ready') return null;
+  const showLines = settings.enabled && subs.status === 'ready';
 
   const learningText = subs.learning[active.learning]?.text;
   const nativeText = subs.native[active.native]?.text;
@@ -71,19 +72,28 @@ export function Overlay() {
   };
 
   return (
-    <div className="lg-root">
-      {settings.learning.visible &&
-        (learningText ? (
-          <Line text={learningText} kind="learning" line={settings.learning} />
-        ) : (
-          status('learning', nativeText)
-        ))}
-      {settings.native.visible &&
-        (nativeText ? (
-          <Line text={nativeText} kind="native" line={settings.native} />
-        ) : (
-          status('native', learningText)
-        ))}
-    </div>
+    <>
+      <div className="lg-layer lg-layer-menu">
+        <Menu settings={settings} />
+      </div>
+      <div className="lg-layer">
+        {showLines && (
+          <div className="lg-root">
+            {settings.learning.visible &&
+              (learningText ? (
+                <Line text={learningText} kind="learning" line={settings.learning} />
+              ) : (
+                status('learning', nativeText)
+              ))}
+            {settings.native.visible &&
+              (nativeText ? (
+                <Line text={nativeText} kind="native" line={settings.native} />
+              ) : (
+                status('native', learningText)
+              ))}
+          </div>
+        )}
+      </div>
+    </>
   );
 }

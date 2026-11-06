@@ -1,7 +1,15 @@
 import type { Cue } from '@/core/cues';
 import { createStore } from '@/core/store';
 import { settingsItem, type Settings } from '@/storage/settings';
-import { buildTimedTextUrl, chooseTrack, parseJson3, type TrackChoice } from './captions';
+import {
+  buildTimedTextUrl,
+  chooseTrack,
+  findTrackInLanguage,
+  parseJson3,
+  type TrackChoice,
+} from './captions';
+import { mergeCues } from '@/core/mergeCues';
+import { createCachedTranslate } from '@/providers/translator/cached';
 import { getPlayerState, primeCaptions } from './bridge';
 import { findVideo, getVideoId } from './player';
 import { getTranslator } from '@/providers/translator/chrome';
@@ -23,7 +31,7 @@ export interface SubtitleState {
   status: SubtitleStatus;
   learning: Cue[];
   native: Cue[];
-  /** True when the line comes from YouTube's auto-translation. */
+  /** True when the line is machine-translated (not the video's own subtitles). */
   learningTranslated: boolean;
   nativeTranslated: boolean;
   /** Set while a line is being translated on-device. */
@@ -113,9 +121,6 @@ async function load(videoId: string, settings: Settings, isStale: () => boolean)
     return;
   }
 
-  const learningChoice = chooseTrack(state.tracks, settings.learningLanguage)!;
-  const nativeChoice = chooseTrack(state.tracks, settings.nativeLanguage)!;
-
   // Wait for the player's own subtitle request so we can reuse its token. If it
   // hasn't made one, keep asking it to load captions. Time spent in ads doesn't
   // count towards the timeout (requests during an ad are for the ad's video).
@@ -134,15 +139,38 @@ async function load(videoId: string, settings: Settings, isStale: () => boolean)
     return;
   }
 
-  const [learning, native] = await Promise.all([
-    loadCues(state, learningChoice),
-    loadCues(state, nativeChoice),
-  ]);
+  const captured = state;
+  const lang = { learning: settings.learningLanguage, native: settings.nativeLanguage };
+  const other = (line: LineKind): LineKind => (line === 'learning' ? 'native' : 'learning');
+
+  const fetchTrack = async (choice: TrackChoice) => {
+    const cues = await loadCues(captured, choice);
+    // Auto-generated captions arrive as short fragments; join them into sentences.
+    return choice.track.kind === 'asr' ? mergeCues(cues) : cues;
+  };
+
+  // Each line uses the video's own subtitles in its language when they exist.
+  const own = {
+    learning: findTrackInLanguage(state.tracks, lang.learning),
+    native: findTrackInLanguage(state.tracks, lang.native),
+  };
+  const cues: Record<LineKind, Cue[]> = { learning: [], native: [] };
+  await Promise.all(
+    (['learning', 'native'] as const).map(async (line) => {
+      const track = own[line];
+      if (track) cues[line] = await fetchTrack({ track });
+    }),
+  );
   if (isStale()) return;
 
-  log(`Loaded ${learning.length} learning cues and ${native.length} native cues`, {
-    learning: describeChoice(learningChoice),
-    native: describeChoice(nativeChoice),
+  // Neither language exists: start from YouTube's auto-translation of the learning line.
+  if (!cues.learning.length && !cues.native.length) {
+    const choice = chooseTrack(state.tracks, lang.learning);
+    if (choice) cues.learning = await fetchTrack(choice);
+    if (isStale()) return;
+  }
+
+  log(`Loaded ${cues.learning.length} learning lines and ${cues.native.length} native lines`, {
     available: state.tracks.map(
       (t) =>
         `${t.languageCode}${t.kind === 'asr' ? ' (auto)' : ''}${t.isTranslatable === false ? ' (not translatable)' : ''}`,
@@ -150,21 +178,30 @@ async function load(videoId: string, settings: Settings, isStale: () => boolean)
   });
   subtitleStore.set({
     videoId,
-    status: learning.length || native.length ? 'ready' : 'error',
-    learning,
-    native,
-    learningTranslated: !!learningChoice.tlang,
-    nativeTranslated: !!nativeChoice.tlang,
+    status: cues.learning.length || cues.native.length ? 'ready' : 'error',
+    learning: cues.learning,
+    native: cues.native,
+    learningTranslated: !own.learning,
+    nativeTranslated: !own.native,
     pending: {},
   });
 
-  // YouTube's auto-translate is unreliable (often empty for auto-generated tracks).
-  // Fill a missing line by translating the other one on-device.
-  if (learning.length && !native.length) {
-    void fillLine('native', learning, settings.learningLanguage, settings.nativeLanguage, isStale);
-  } else if (native.length && !learning.length) {
-    void fillLine('learning', native, settings.nativeLanguage, settings.learningLanguage, isStale);
-  }
+  // Fill a missing line by translating the other one on-device. If Chrome's
+  // translator isn't available, fall back to YouTube's auto-translation.
+  const missing = (['native', 'learning'] as const).find(
+    (line) => !cues[line].length && cues[other(line)].length,
+  );
+  if (!missing) return;
+  const source = other(missing);
+  const translated = await fillLine(missing, cues[source], lang[source], lang[missing], isStale);
+  if (translated || isStale()) return;
+
+  const choice = chooseTrack(state.tracks, lang[missing]);
+  if (!choice) return;
+  const fallback = await fetchTrack(choice);
+  if (isStale() || !fallback.length) return;
+  log(`Using YouTube's auto-translation for the ${missing} line`);
+  subtitleStore.set({ ...subtitleStore.get(), [missing]: fallback });
 }
 
 /** Updates one line's pending status (undefined clears it), unless the load is stale. */
@@ -174,35 +211,45 @@ function setPending(line: LineKind, pending: LinePending | undefined, isStale: (
   subtitleStore.set({ ...current, pending: { ...current.pending, [line]: pending } });
 }
 
+/** Translates `source` into `line` on-device. Returns false if Chrome's translator isn't available. */
 async function fillLine(
   line: LineKind,
   source: Cue[],
   from: string,
   to: string,
   isStale: () => boolean,
-) {
+): Promise<boolean> {
   setPending(line, { phase: 'translating' }, isStale);
   const translator = await getTranslator(from, to, (status) =>
     setPending(line, status.phase === 'ready' ? { phase: 'translating' } : status, isStale),
   );
   if (!translator) {
     setPending(line, undefined, isStale);
-    return;
+    return false;
   }
-  if (isStale()) return;
-  log(`Translating ${source.length} lines ${from} → ${to} on-device`);
+  if (isStale()) return true;
+
   const startedAt = performance.now();
+  const cached = await createCachedTranslate(
+    from,
+    to,
+    source.map((c) => c.text),
+    (text) => translator.translate(text),
+  );
+  log(`Translating ${source.length} lines ${from} → ${to} on-device (${cached.hits} cached)`);
   await translateCues(source, {
-    translate: (text) => translator.translate(text),
+    translate: cached.translate,
     currentTimeMs: () => (findVideo()?.currentTime ?? 0) * 1000,
     isStale,
     onProgress: (cues) => {
       const current = subtitleStore.get();
-      subtitleStore.set({ ...current, [line]: cues, [`${line}Translated`]: true });
+      subtitleStore.set({ ...current, [line]: cues });
     },
   });
+  cached.save();
   setPending(line, undefined, isStale);
   if (!isStale()) log(`Translated in ${Math.round(performance.now() - startedAt)} ms`);
+  return true;
 }
 
 const HIDE_NATIVE_CAPTIONS_ID = 'linguaiuto-hide-yt-captions';

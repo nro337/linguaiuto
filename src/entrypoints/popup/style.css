@@ -36,3 +36,9 @@ select {
   margin: 2px 0 4px;
   font: inherit;
 }
+
+.hint {
+  margin: 8px 0 0;
+  color: #666;
+  font-size: 12px;
+}

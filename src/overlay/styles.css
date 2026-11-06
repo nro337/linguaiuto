@@ -1,27 +1,33 @@
 /*
- * The shadow host stays an inline, unpositioned element inside #movie_player
- * (WXT resets it with `all: initial`). The shadow <html> fills the player instead.
+ * Our own full-player layer, above the video (z-index 10) and YouTube's
+ * captions but below its control bar and menus (59+). WXT's shadow host and
+ * wrapper are left unpositioned, so this is relative to #movie_player.
  */
-html {
+.lg-layer {
   position: absolute;
   inset: 0;
   z-index: 45;
   pointer-events: none;
   overflow: hidden;
+  contain: layout paint;
+}
+
+/* The settings panel sits above YouTube's watermark/cards layer (59) but below its own popups. */
+.lg-layer-menu {
+  z-index: 60;
 }
 
 .lg-root {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 12%;
+  /* Stay clear of the control bar (about 48px) on small players. */
+  bottom: max(12%, 64px);
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
   pointer-events: none;
-  contain: layout paint;
-  z-index: 60;
   font-family:
     system-ui,
     -apple-system,
@@ -63,4 +69,57 @@ html {
 .lg-status {
   color: #bdbdbd;
   font-style: italic;
+}
+
+/* Settings panel, bottom-right just above the control bar. */
+.lg-menu-panel {
+  position: absolute;
+  right: 12px;
+  bottom: 60px;
+  width: max-content;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(28, 28, 28, 0.92);
+  color: #fff;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  font-size: 13px;
+  pointer-events: auto;
+}
+
+.lg-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 3px 0;
+}
+
+.lg-menu-row label,
+label.lg-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.lg-menu-title {
+  margin-bottom: 4px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  font-weight: 600;
+}
+
+.lg-menu-label {
+  min-width: 56px;
+  font-weight: 600;
+}
+
+.lg-menu-hint {
+  margin: 6px 0 0;
+  color: #aaa;
+  font-size: 11px;
 }

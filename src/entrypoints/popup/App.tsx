@@ -74,6 +74,7 @@ export function App() {
           </label>
         </fieldset>
       ))}
+      <p className="hint">Shortcuts: Alt+1 / Alt+2 show or hide · Alt+Shift+1 / Alt+Shift+2 blur</p>
     </main>
   );
 }

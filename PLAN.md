@@ -102,20 +102,21 @@ Findings from the Phase 1 spike:
 - Empty overlay drawn inside the YouTube player (Shadow DOM) to show the wiring works
 - Placeholder popup
 
-### Phase 1 — Subtitles on screen (built; needs checking in a normal Chrome profile)
+### Phase 1 — Subtitles on screen ✅
 
 - Spike: catch the player's timedtext request (pot), fetch json3
 - Cue parser + binary-search scheduler (unit tested)
 - Overlay synced to the video. Handles in-site navigation, fullscreen and resizing
 - Learning/native language selection (EN/IT)
 
-### Phase 2 — Dual lines + controls
+### Phase 2 — Dual lines + controls (built; needs checking in a normal Chrome profile)
 
-- Native line via Translator API; fallback to YouTube `tlang`
-- Translate-ahead pipeline + IndexedDB cache
+- Each line uses the video's own subtitles in its language if they exist; otherwise the other line is translated on-device with the Translator API; YouTube `tlang` only if that's unavailable
+- Auto-generated fragments merged into sentence-sized lines before display and translation
+- Translate-ahead from the current position + persistent cache (extension IndexedDB via the background worker, keyed by language pair + text)
 - Per-line show/hide + blur; hover-to-unblur words
-- Keyboard shortcuts (`Alt+1`, `Alt+2`, `Alt+B`)
-- Small settings menu on the player + popup
+- Keyboard shortcuts: `Alt+1` / `Alt+2` show/hide, `Alt+Shift+1` / `Alt+Shift+2` blur
+- "Aa" button in YouTube's control bar opens a settings panel; popup has the same toggles
 
 ### Phase 3 — Word tooltip
 

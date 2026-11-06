@@ -19,17 +19,25 @@ export interface TrackChoice {
 
 const primary = (code: string) => code.toLowerCase().split(/[-_]/)[0] ?? '';
 
+/** Best track already in `lang`: human-made, then auto-generated. */
+export function findTrackInLanguage(
+  tracks: readonly CaptionTrack[],
+  lang: string,
+): CaptionTrack | null {
+  const want = primary(lang);
+  const inLang = tracks.filter((t) => primary(t.languageCode) === want);
+  return inLang.find((t) => t.kind !== 'asr') ?? inLang[0] ?? null;
+}
+
 /**
  * Best track for `lang`: human-made in that language, then auto-generated in
  * that language, then YouTube's auto-translation of the best other track.
  */
 export function chooseTrack(tracks: readonly CaptionTrack[], lang: string): TrackChoice | null {
-  const want = primary(lang);
-  const inLang = tracks.filter((t) => primary(t.languageCode) === want);
-  const manual = inLang.find((t) => t.kind !== 'asr');
-  if (manual) return { track: manual };
-  if (inLang[0]) return { track: inLang[0] };
+  const own = findTrackInLanguage(tracks, lang);
+  if (own) return { track: own };
 
+  const want = primary(lang);
   const source = tracks.find((t) => t.kind !== 'asr') ?? tracks[0];
   return source ? { track: source, tlang: want } : null;
 }
