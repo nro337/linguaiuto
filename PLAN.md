@@ -1,0 +1,169 @@
+# Linguaiuto — Project Plan
+
+A Chrome extension (Manifest V3) that adds dual-language, interactive subtitles on top of YouTube videos for language learners. Other video sites come later through site adapters.
+
+## Decisions (confirmed)
+
+- **First language pair:** English ↔ Italian (both directions supported).
+- **No AI features yet.** Gemini Nano / Prompt API is deferred.
+- **On-device only.** No third-party online translation services. Translation uses Chrome's built-in Translator API. YouTube's own subtitle auto-translate (`tlang`) is the fallback because it comes from the same YouTube request, not an outside service.
+- **UI framework:** React for the popup, options and overlay (rendered inside Shadow DOM).
+- **Vocab saving / Anki export:** Phase 4.
+- **No user-supplied tokens.** Subtitles must "just work". The token YouTube requires (`pot`) is created by YouTube's own player, and the extension reuses the player's request (details below).
+
+## Goals
+
+1. Two subtitle lines over the video:
+   - **Top, larger:** the language being learned.
+   - **Bottom, smaller:** the user's native language.
+2. Each line can be toggled on/off and **blurred** independently.
+3. Hovering a word unblurs only that word and shows a tooltip with translation, pronunciation (audio + IPA), part of speech, base form and key details.
+4. Performance comes first: never cause video jank, and do translation work ahead of time instead of on display.
+
+## Tech stack
+
+| Area                | Choice                                                    |
+| ------------------- | --------------------------------------------------------- |
+| Extension framework | WXT (Vite, MV3)                                           |
+| Language            | TypeScript (strict)                                       |
+| UI                  | React 19 (popup, options, overlay inside Shadow DOM)      |
+| Settings            | `chrome.storage.sync`                                     |
+| Cache               | IndexedDB via `idb` (subtitles, translations, dictionary) |
+| Tests               | Vitest (unit), Playwright (E2E with the extension loaded) |
+| Lint/format         | ESLint (flat config) + Prettier                           |
+| CI                  | GitHub Actions: lint, typecheck, test, build              |
+
+## Data sources (on-device / free)
+
+| Need                           | Source                                                                                                             |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| Line translation               | Chrome **Translator API** (`Translator.create`). Fallback: YouTube `tlang` auto-translated track                   |
+| Language check                 | Chrome **Language Detector API**                                                                                   |
+| Word segmentation              | `Intl.Segmenter` (word granularity)                                                                                |
+| Word translation               | Translator API (cached)                                                                                            |
+| Pronunciation audio            | Web Speech API `speechSynthesis`                                                                                   |
+| IPA, part of speech, base form | A bundled offline dictionary for IT/EN built from Wiktionary data (kaikki.org), loaded into IndexedDB on first run |
+
+All providers sit behind small interfaces (`TranslationProvider`, `DictionaryProvider`, `PronunciationProvider`) so more can be added later.
+
+## Architecture
+
+```
+YouTube page
+ ├─ main-world script   reads caption track list from the player,
+ │                      catches the player's own timedtext request (with pot)
+ ├─ content script      overlay (React in Shadow DOM inside #movie_player),
+ │                      cue timing, hover/tooltip
+ └─ service worker      cache coordination, settings, messaging
+Offscreen document      only if Translator API isn't available to the content script
+Popup / Options         languages, toggles, blur, font sizes
+IndexedDB               cues, translations, dictionary
+```
+
+### Getting subtitles without user tokens
+
+YouTube's subtitle (`timedtext`) requests now need a proof-of-origin token (`pot`) that the player generates. The extension never asks for or makes up this token:
+
+1. A main-world script wraps `fetch`/`XMLHttpRequest` and records any `timedtext` URL the player requests (it already contains `pot`).
+2. With that URL, the extension swaps `lang`/`tlang`/`fmt=json3` to fetch the tracks it needs.
+3. If the player hasn't requested subtitles yet, the extension briefly turns captions on through the player API, captures the URL, then restores the user's caption state. The user only ever sees the extension's own overlay.
+4. Spike this first in Phase 1. Everything depends on it.
+
+Findings from the Phase 1 spike:
+
+- The player requests subtitles via XHR, already with `fmt=json3`. Without `pot` the response is empty.
+- The player can report a caption track as selected without having downloaded it, so "is it on?" checks are unreliable. Calling the player's `toggleSubtitles()` does trigger the request. The extension toggles and then restores the user's on/off choice.
+- Pre-roll ads play in the same player and make subtitle requests for the ad's video. The extension ignores requests for other video IDs, doesn't toggle during ads (`.ad-showing`), and doesn't count ad time towards its timeout.
+- Not every request carries `pot`. Requests without one are still reused as-is.
+
+### Flow on video load
+
+1. Detect in-site navigation (`yt-navigate-finish`) and read the video ID.
+2. Read caption tracks from the player response. Prefer human-made subtitles over auto-generated ones in the learning language.
+3. Fetch json3 and parse into `Cue { start, end, text, tokens[] }`.
+4. Translate the first ~30 s right away, then the rest in batches when idle (`requestIdleCallback`). Cache by `videoId + langPair + cueIndex`.
+5. Hide YouTube's own caption rendering while the overlay is on.
+
+### Rendering performance
+
+- Cue timing via `requestVideoFrameCallback` (fallback `timeupdate`) plus a binary search over the cues. Only update React state when the active cue changes.
+- Each word is a `<span>`, built once per cue change and memoized.
+- Blur is **pure CSS**: `filter: blur()` on the line and `:hover` to unblur a word, with no JS running.
+- Tooltip opens after hovering ~120 ms. One tooltip element is reused, lookups are cached, and it renders the quick part first.
+- `contain: layout paint` on the overlay root. No forced layout reads during playback.
+- `ResizeObserver` on the player for fullscreen, theater mode and mini-player.
+
+## Phases
+
+### Phase 0 — Setup ✅
+
+- WXT + React + TypeScript project
+- ESLint, Prettier, Vitest, GitHub Actions CI
+- Empty overlay drawn inside the YouTube player (Shadow DOM) to show the wiring works
+- Placeholder popup
+
+### Phase 1 — Subtitles on screen ✅
+
+- Spike: catch the player's timedtext request (pot), fetch json3
+- Cue parser + binary-search scheduler (unit tested)
+- Overlay synced to the video. Handles in-site navigation, fullscreen and resizing
+- Learning/native language selection (EN/IT)
+
+### Phase 2 — Dual lines + controls ✅
+
+- Each line uses the video's own subtitles in its language if they exist; otherwise the other line is translated on-device with the Translator API; YouTube `tlang` only if that's unavailable
+- Auto-generated fragments merged into sentence-sized lines before display and translation
+- Translate-ahead from the current position + persistent cache (extension IndexedDB via the background worker, keyed by language pair + text)
+- Per-line show/hide + blur; hover-to-unblur words
+- Keyboard shortcuts: `Alt+1` / `Alt+2` show/hide, `Alt+Shift+1` / `Alt+Shift+2` blur
+- "Aa" button in YouTube's control bar opens a settings panel; popup has the same toggles
+
+### Phase 3 — Word tooltip ✅
+
+- Words split with `Intl.Segmenter`; Italian elisions split into two words (`l'` + `acqua`)
+- Hover intent (120 ms open, 250 ms grace to move into the tooltip); the hovered word stays unblurred
+- Tooltip: word, IPA, speak button (Web Speech API), translation (Translator API, cached), part of speech, base form and its meaning
+- Hovering a native-line word shows its learning-language translation and that word's entry
+- Offline dictionaries built from Wiktionary (kaikki.org) for the 50k most frequent subtitle words + their base forms: IT 0.8 MB, EN 2.3 MB gzipped, imported into IndexedDB on install
+- Optional pause while hovering (menu + popup)
+
+### Phase 4 — Learning tools (built; needs checking in a normal Chrome profile)
+
+- Save words from the tooltip (bookmark); saved words underlined in the subtitles
+- Vocabulary page (search, remove, link back to the moment in the video); export for Anki (tab-separated with Anki headers, HTML fields, tags) and CSV
+- Previous / next / replay line: `Shift+←` / `Shift+→` / `Shift+↓`, plus buttons in the Aa menu
+- Optional auto-pause at the end of each line
+- Transcript panel in YouTube's right-hand column: follows playback, click to jump, respects blur, light/dark theme
+- One shared playback loop drives the overlay, the transcript and auto-pause
+- Appearance for different visibility needs: text size per line, background opacity (text gets an outline below 50%), and subtitles that can be dragged anywhere inside the video (arrow keys on the handle, double-click or "Reset position" to restore). Sliders preview instantly and save after a pause, since `chrome.storage.sync` limits write frequency
+
+### Later
+
+- Site adapters for other video platforms (YouTube-specific code is already isolated in `adapters/youtube`)
+- AI features (Gemini Nano) for explanations in context
+
+## Settings
+
+Learning language, native language, show/hide each line, blur each line, text size for each line, background opacity, subtitle position, pause on hover, pause at end of each line, transcript on/off.
+
+## Risks
+
+| Risk                                         | How to handle it                                                             |
+| -------------------------------------------- | ---------------------------------------------------------------------------- |
+| `pot` token required for timedtext           | Reuse the player's own request (see above). Spike first                      |
+| Translator model download needs a user click | Prompt from the popup or player menu click. Use `tlang` fallback meanwhile   |
+| Translating one line at a time loses context | Translate a few lines together and split them back apart                     |
+| YouTube page changes                         | Keep everything YouTube-specific in `adapters/youtube`, plus E2E smoke tests |
+
+## Folder layout
+
+```
+src/
+  entrypoints/        background.ts, youtube.content/, main-world.ts, popup/, options/
+  adapters/youtube/   captions.ts, player.ts, navigation.ts
+  core/               cues.ts, scheduler.ts, tokenizer.ts
+  providers/          translator/, dictionary/, pronunciation/
+  overlay/            Overlay.tsx, Tooltip.tsx, styles.css
+  storage/            settings.ts, cache.ts
+tests/
+```

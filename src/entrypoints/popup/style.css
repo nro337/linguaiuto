@@ -1,0 +1,86 @@
+body {
+  margin: 0;
+  min-width: 240px;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  font-size: 14px;
+}
+
+main {
+  padding: 12px;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+fieldset {
+  margin: 8px 0 0;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+select {
+  margin: 2px 0 4px;
+  font: inherit;
+}
+
+.hint {
+  margin: 8px 0 0;
+  color: #666;
+  font-size: 12px;
+}
+
+.options {
+  margin-top: 8px;
+}
+
+.vocab-button {
+  width: 100%;
+  margin-top: 10px;
+  padding: 6px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #f6f6f6;
+  font: inherit;
+  cursor: pointer;
+}
+
+.slider {
+  display: grid;
+  grid-template-columns: 70px 1fr 40px;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.slider.standalone {
+  margin-top: 8px;
+}
+
+.slider output {
+  color: #666;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.position {
+  justify-content: space-between;
+  color: #666;
+}
+
+.position button {
+  font: inherit;
+}
