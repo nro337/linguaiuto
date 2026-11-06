@@ -1,5 +1,14 @@
 # Linguaiuto
 
+[![CI](https://github.com/nro337/linguaiuto/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/nro337/linguaiuto/actions/workflows/ci.yml)
+[![Version](https://img.shields.io/github/package-json/v/nro337/linguaiuto?color=blue)](package.json)
+[![License: MIT with attribution](https://img.shields.io/badge/license-MIT%20%2B%20attribution-green)](LICENSE)
+[![Chrome extension](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/develop/migrate/what-is-mv3)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![WXT](https://img.shields.io/badge/built%20with-WXT-67D55E)](https://wxt.dev/)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](#contributing)
+
 Linguaiuto is an open source language learning tool that helps you learn a language from the videos and media you already watch. It's a Chrome extension that puts two subtitle lines over YouTube videos: the language you're learning on top, your own language below. Hover any word to see its translation, pronunciation and grammar, save it to your vocabulary, and export it to Anki.
 
 Everything runs on your device. Translation uses Chrome's built-in Translator API and the dictionaries ship with the extension, so nothing you watch or look up is sent to a third-party service.
