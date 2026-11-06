@@ -1,4 +1,6 @@
-# Linguaiuto
+<p align="center">
+  <img src="docs/assets/linguaiuto-readme-banner.svg" alt="Linguaiuto" width="100%">
+</p>
 
 [![CI](https://github.com/nro337/linguaiuto/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/nro337/linguaiuto/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/github/package-json/v/nro337/linguaiuto?color=blue)](package.json)

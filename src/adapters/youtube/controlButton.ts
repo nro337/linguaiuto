@@ -16,20 +16,22 @@ function createButton(): HTMLButtonElement {
   svg.setAttribute('viewBox', '0 0 24 24');
   svg.setAttribute('width', '24');
   svg.setAttribute('height', '24');
-  const text = document.createElementNS(SVG_NS, 'text');
-  Object.entries({
-    // Center on the middle of the glyphs, not the baseline.
-    x: '12',
-    y: '12',
-    'text-anchor': 'middle',
-    'dominant-baseline': 'central',
-    'font-size': '13',
-    'font-weight': '700',
-    'font-family': 'Roboto, Arial, sans-serif',
-    fill: '#fff',
-  }).forEach(([k, v]) => text.setAttribute(k, v));
-  text.textContent = 'Aa';
-  svg.append(text);
+  svg.setAttribute('aria-hidden', 'true');
+
+  const panels = document.createElementNS(SVG_NS, 'path');
+  panels.setAttribute(
+    'd',
+    'M3.4 4.1h5.1c2.1 0 3.5 1.4 3.5 3.4v10.2a5.9 5.9 0 0 0-4.1-1.6h-.8L3.9 19l.8-2.9H3.4c-1.6 0-2.6-1.1-2.6-2.7V6.8c0-1.6 1-2.7 2.6-2.7Zm17.2 0h-5.1c-2.1 0-3.5 1.4-3.5 3.4v10.2a5.9 5.9 0 0 1 4.1-1.6h.8l3.2 2.9-.8-2.9h1.3c1.6 0 2.6-1.1 2.6-2.7V6.8c0-1.6-1-2.7-2.6-2.7Z',
+  );
+  panels.setAttribute('fill', '#fff');
+
+  const bridge = document.createElementNS(SVG_NS, 'path');
+  bridge.setAttribute('d', 'M6.4 12.5c1.6 2 3.4 3 5.6 3s4-1 5.6-3');
+  bridge.setAttribute('fill', 'none');
+  bridge.setAttribute('stroke', '#fff');
+  bridge.setAttribute('stroke-linecap', 'round');
+  bridge.setAttribute('stroke-width', '1.6');
+  svg.append(panels, bridge);
   button.append(svg);
 
   button.addEventListener('click', () => menuOpenStore.set(!menuOpenStore.get()));

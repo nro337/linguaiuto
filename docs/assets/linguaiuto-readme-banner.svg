@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" role="img" aria-labelledby="title desc">
+  <title id="title">Linguaiuto</title>
+  <desc id="desc">The Linguaiuto mark beside the application name</desc>
+  <rect width="1280" height="320" rx="32" fill="#17152B" />
+  <circle cx="1140" cy="52" r="160" fill="#5946E8" opacity=".1" />
+  <circle cx="1092" cy="314" r="210" fill="#13BFAE" opacity=".08" />
+  <g transform="translate(70 26) scale(.52)">
+    <path
+      fill="#5946E8"
+      d="M72 88h108c45 0 76 30 76 74v218c-25-22-54-34-88-34h-17l-69 62 18-62H72c-35 0-56-23-56-58V146c0-35 21-58 56-58Z"
+    />
+    <path
+      fill="#13BFAE"
+      d="M440 88H332c-45 0-76 30-76 74v218c25-22 54-34 88-34h17l69 62-18-62h28c35 0 56-23 56-58V146c0-35-21-58-56-58Z"
+    />
+    <path
+      fill="none"
+      stroke="#F4B942"
+      stroke-linecap="round"
+      stroke-width="34"
+      d="M137 267c33 43 72 65 119 65s86-22 119-65"
+    />
+  </g>
+  <text
+    x="395"
+    y="183"
+    fill="#FFFFFF"
+    font-family="Inter, ui-rounded, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    font-size="92"
+    font-weight="720"
+    letter-spacing="-3"
+  >Linguaiuto</text>
+</svg>
