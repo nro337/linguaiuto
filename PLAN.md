@@ -109,7 +109,7 @@ Findings from the Phase 1 spike:
 - Overlay synced to the video. Handles in-site navigation, fullscreen and resizing
 - Learning/native language selection (EN/IT)
 
-### Phase 2 — Dual lines + controls (built; needs checking in a normal Chrome profile)
+### Phase 2 — Dual lines + controls ✅
 
 - Each line uses the video's own subtitles in its language if they exist; otherwise the other line is translated on-device with the Translator API; YouTube `tlang` only if that's unavailable
 - Auto-generated fragments merged into sentence-sized lines before display and translation
@@ -118,12 +118,14 @@ Findings from the Phase 1 spike:
 - Keyboard shortcuts: `Alt+1` / `Alt+2` show/hide, `Alt+Shift+1` / `Alt+Shift+2` blur
 - "Aa" button in YouTube's control bar opens a settings panel; popup has the same toggles
 
-### Phase 3 — Word tooltip
+### Phase 3 — Word tooltip (built; needs checking in a normal Chrome profile)
 
-- Tokenize lines with `Intl.Segmenter`
-- Tooltip: word translation, IPA, part of speech, base form, speak button
-- Offline IT/EN dictionary pack (Wiktionary/kaikki) in IndexedDB
-- Optional pause-on-hover
+- Words split with `Intl.Segmenter`; Italian elisions split into two words (`l'` + `acqua`)
+- Hover intent (120 ms open, 250 ms grace to move into the tooltip); the hovered word stays unblurred
+- Tooltip: word, IPA, speak button (Web Speech API), translation (Translator API, cached), part of speech, base form and its meaning
+- Hovering a native-line word shows its learning-language translation and that word's entry
+- Offline dictionaries built from Wiktionary (kaikki.org) for the 50k most frequent subtitle words + their base forms: IT 0.8 MB, EN 2.3 MB gzipped, imported into IndexedDB on install
+- Optional pause while hovering (menu + popup)
 
 ### Phase 4 — Learning tools (later)
 

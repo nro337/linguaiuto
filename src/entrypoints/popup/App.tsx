@@ -74,6 +74,14 @@ export function App() {
           </label>
         </fieldset>
       ))}
+      <label className="row option">
+        <input
+          type="checkbox"
+          checked={settings.pauseOnHover}
+          onChange={(e) => update({ ...settings, pauseOnHover: e.target.checked })}
+        />
+        Pause while hovering a word
+      </label>
       <p className="hint">Shortcuts: Alt+1 / Alt+2 show or hide · Alt+Shift+1 / Alt+Shift+2 blur</p>
     </main>
   );

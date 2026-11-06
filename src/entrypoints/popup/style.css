@@ -42,3 +42,7 @@ select {
   color: #666;
   font-size: 12px;
 }
+
+.option {
+  margin-top: 8px;
+}

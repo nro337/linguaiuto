@@ -91,6 +91,15 @@ export function Menu({ settings }: { settings: Settings }) {
       </label>
       {row('learning', '1')}
       {row('native', '2')}
+      <label className="lg-menu-row lg-menu-option">
+        <input
+          type="checkbox"
+          checked={settings.pauseOnHover}
+          disabled={!settings.enabled}
+          onChange={(e) => update({ pauseOnHover: e.target.checked })}
+        />
+        Pause while hovering a word
+      </label>
       <p className="lg-menu-hint">Alt+1/2 show · Alt+Shift+1/2 blur</p>
     </div>
   );
